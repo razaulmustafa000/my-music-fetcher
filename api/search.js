@@ -1,6 +1,5 @@
 // api/search.js
 export default async function handler(req, res) {
-  // CORS allow karein taake koi block na kare
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 
@@ -14,11 +13,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Query parameter is required' });
   }
 
-  // Backup APIs in case one fails
+  // Yahan humne &limit=40 add kar diya hai taake 20+ songs lazmi aayein
   const apiUrls = [
-    `https://saavn.sumit.co/api/search/songs?query=${encodeURIComponent(query)}`,
-    `https://saavn.dev/api/search/songs?query=${encodeURIComponent(query)}`,
-    `https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${encodeURIComponent(query)}`
+    `https://saavn.sumit.co/api/search/songs?query=${encodeURIComponent(query)}&limit=40`,
+    `https://saavn.dev/api/search/songs?query=${encodeURIComponent(query)}&limit=40`,
+    `https://jiosaavn-api-privatecvc2.vercel.app/search/songs?query=${encodeURIComponent(query)}&limit=40`
   ];
 
   for (let url of apiUrls) {
@@ -33,6 +32,5 @@ export default async function handler(req, res) {
     }
   }
 
-  // Agar saari APIs fail ho jayen
   return res.status(500).json({ error: 'Failed to fetch songs from all sources.' });
 }
