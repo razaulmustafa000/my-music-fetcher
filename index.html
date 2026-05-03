@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Music Downloader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 50px 20px; }
+        .container { max-width: 650px; margin: auto; }
+        h2 { text-align: center; color: #1DB954; font-size: 28px; margin-bottom: 30px; }
+        .search-wrapper { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 15px; border-radius: 30px; border: none; background: #282828; color: white; font-size: 16px; outline: none; padding-left: 25px; }
+        button { padding: 15px 30px; border-radius: 30px; border: none; background: #1DB954; color: black; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #1ed760; transform: scale(1.02); }
+        .loader { border: 4px solid #282828; border-top: 4px solid #1DB954; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 30px auto; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .song-card { background: #181818; padding: 15px 20px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #282828; }
+        .song-info strong { display: block; font-size: 16px; margin-bottom: 5px; }
+        .song-info small { color: #b3b3b3; font-size: 13px; }
+        .dl-btn { background: transparent; border: 1px solid #1DB954; color: #1DB954; padding: 8px 18px; border-radius: 20px; text-decoration: none; font-weight: 600; font-size: 14px; transition: 0.3s; cursor: pointer;}
+        .dl-btn:hover { background: #1DB954; color: black; }
+        .error-text { color: #ff4d4d; text-align: center; margin-top: 20px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🎵 Universal Music Fetcher</h2>
+    <div class="search-wrapper">
+        <input type="text" id="query" placeholder="Search for any song...">
+        <button onclick="searchAudio()">Search</button>
+    </div>
+    <div id="loader" class="loader"></div>
+    <div id="results"></div>
+</div>
+
+<script>
+    async function searchAudio() {
+        const query = document.getElementById('query').value;
+        const resultsDiv = document.getElementById('results');
+        const loader = document.getElementById('loader');
+
+        if(!query) return alert("Please type a song name!");
+
+        resultsDiv.innerHTML = '';
+        loader.style.display = 'block';
+
+        try {
+            // 🔴 Ab hum Vercel ke apne API route ko call kar rahe hain (CORS error fix)
+            const response = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            loader.style.display = 'none';
+
+            if (!data.data || !data.data.results || data.data.results.length === 0) {
+                resultsDiv.innerHTML = '<p class="error-text">No songs found.</p>';
+                return;
+            }
+
+            data.data.results.forEach(song => {
+                const downloadLink = song.downloadUrl.find(link => link.quality === '320kbps')?.url || song.downloadUrl[0].url;
+                
+                const tempDiv = document.createElement("div");
+                tempDiv.innerHTML = song.name;
+                const cleanTitle = tempDiv.textContent || tempDiv.innerText;
+
+                resultsDiv.innerHTML += `
+                    <div class="song-card">
+                        <div class="song-info">
+                            <strong>${cleanTitle}</strong>
+                            <small>By: ${song.artists.primary[0]?.name || 'Unknown'}</small>
+                        </div>
+                        <button onclick="downloadFile('${downloadLink}', '${cleanTitle.replace(/'/g, "\\'")}')" class="dl-btn">Download</button>
+                    </div>
+                `;
+            });
+        } catch (error) {
+            loader.style.display = 'none';
+            resultsDiv.innerHTML = '<p class="error-text">❌ Error fetching songs. API might be busy.</p>';
+        }
+    }
+
+    async function downloadFile(url, title) {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = downloadUrl;
+            a.download = `${title}.m4a`; 
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (error) {
+            alert("Error downloading file. Please try again.");
+        }
+    }
+
+    document.getElementById("query").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") searchAudio();
+    });
+</script>
+
+</body>
+</html>
